@@ -13,14 +13,14 @@ class ExrChannels:
     Some channels are named differently in different renderers.
     Default values below according to VRay renderer.
 
-    Note: In Eevee, Cycles and Vray, the beauty pass (RGB image) is saved in sRGB colorspace, which is as normal.
-          Other passes (depth, normals, etc) are linear.
+    Note: In Blender and Vray, the beauty pass (RGB image) is saved in sRGB colorspace. Image files are normally
+          in sRGB. Other passes (depth, normals, etc) are linear RGB colorspace.
     """
     def __init__(self, renderer):
         """Set constants depending on renderer used
 
         Args:
-            renderer (str): Which renderer we're using. Default = 'vray'. Valid options present in const RENDERER.
+            renderer (Renderer): Which renderer we're using.
         """
         if not isinstance(renderer, Renderer):
             raise ValueError(f'Input renderer ({renderer}) must be of type enum {Renderer}')
