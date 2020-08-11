@@ -1,6 +1,16 @@
 """Data about the various channels in EXR files output by Synthesis' Blender and Vray render engines"""
 import enum
+from dataclasses import dataclass
+
 import numpy as np
+
+
+@dataclass
+class CryptoLayerMapping:
+    R: str
+    G: str
+    B: str
+    A: str
 
 
 class Renderer(enum.Enum):
@@ -33,9 +43,9 @@ class ExrChannels:
         self.segment_id = None
         # Cryptomatte - Note: 'cryptomatte' (without numerical suffix), is deprecated
         # self.cryptomatte = {'00': {}, '01': {}, '02': {}}  # TODO: Refactor cryptomattes into dict of dicts
-        self.cryptomatte_00 = {'R': None, 'G': None, 'B': None, 'A': None}
-        self.cryptomatte_01 = {'R': None, 'G': None, 'B': None, 'A': None}
-        self.cryptomatte_02 = {'R': None, 'G': None, 'B': None, 'A': None}
+        self.cryptomatte_00 = None
+        self.cryptomatte_01 = None
+        self.cryptomatte_02 = None
         # Common
         self.normals = {
             'X': "normals.X",
@@ -61,21 +71,20 @@ class ExrChannels:
             self.face = "face.R"
             self.segment_id = "segmentindex.R"
 
-            self.cryptomatte_00['R'] = 'cryptomatte00.R'
-            self.cryptomatte_00['G'] = 'cryptomatte00.G'
-            self.cryptomatte_00['B'] = 'cryptomatte00.B'
-            self.cryptomatte_00['A'] = 'cryptomatte00.A'
+            self.cryptomatte_00 = CryptoLayerMapping(R='cryptomatte00.R',
+                                                     G='cryptomatte00.G',
+                                                     B='cryptomatte00.B',
+                                                     A='cryptomatte00.A')
 
-            self.cryptomatte_01['R'] = 'cryptomatte01.R'
-            self.cryptomatte_01['G'] = 'cryptomatte01.G'
-            self.cryptomatte_01['B'] = 'cryptomatte01.B'
-            self.cryptomatte_01['A'] = 'cryptomatte01.A'
+            self.cryptomatte_01 = CryptoLayerMapping(R='cryptomatte01.R',
+                                                     G='cryptomatte01.G',
+                                                     B='cryptomatte01.B',
+                                                     A='cryptomatte01.A')
 
-            self.cryptomatte_02['R'] = 'cryptomatte02.R'
-            self.cryptomatte_02['G'] = 'cryptomatte02.G'
-            self.cryptomatte_02['B'] = 'cryptomatte02.B'
-            self.cryptomatte_02['A'] = 'cryptomatte02.A'
-
+            self.cryptomatte_02 = CryptoLayerMapping(R='cryptomatte02.R',
+                                                     G='cryptomatte02.G',
+                                                     B='cryptomatte02.B',
+                                                     A='cryptomatte02.A')
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
     """Change color space from linear RGB to sRGB colorspace.
