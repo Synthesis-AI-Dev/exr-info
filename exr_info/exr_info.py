@@ -41,11 +41,9 @@ class ExrChannels:
         self.depth = None
         self.face = None
         self.segment_id = None
-        # Cryptomatte - Note: 'cryptomatte' (without numerical suffix), is deprecated
-        # self.cryptomatte = {'00': {}, '01': {}, '02': {}}  # TODO: Refactor cryptomattes into dict of dicts
-        self.cryptomatte_00 = None
-        self.cryptomatte_01 = None
-        self.cryptomatte_02 = None
+        # Cryptomatte - Note: 'cryptomatte' channel in EXR (without numerical suffix), is deprecated
+        # Note: The number of cryptomatte layers will depend on the "Level" of the cryptomatte (num_layers==ceil(level/2)).
+        self.cryptomatte = {'00': None, '01': None, '02': None}
         # Common
         self.normals = {
             'X': "normals.X",
@@ -71,20 +69,21 @@ class ExrChannels:
             self.face = "face.R"
             self.segment_id = "segmentindex.R"
 
-            self.cryptomatte_00 = CryptoLayerMapping(R='cryptomatte00.R',
-                                                     G='cryptomatte00.G',
-                                                     B='cryptomatte00.B',
-                                                     A='cryptomatte00.A')
+            cryptomatte_00 = CryptoLayerMapping(R='cryptomatte00.R',
+                                                G='cryptomatte00.G',
+                                                B='cryptomatte00.B',
+                                                A='cryptomatte00.A')
+            cryptomatte_01 = CryptoLayerMapping(R='cryptomatte01.R',
+                                                G='cryptomatte01.G',
+                                                B='cryptomatte01.B',
+                                                A='cryptomatte01.A')
+            cryptomatte_02 = CryptoLayerMapping(R='cryptomatte02.R',
+                                                G='cryptomatte02.G',
+                                                B='cryptomatte02.B',
+                                                A='cryptomatte02.A')
+            self.cryptomatte = {'00': cryptomatte_00, '01': cryptomatte_01, '02': cryptomatte_02}
 
-            self.cryptomatte_01 = CryptoLayerMapping(R='cryptomatte01.R',
-                                                     G='cryptomatte01.G',
-                                                     B='cryptomatte01.B',
-                                                     A='cryptomatte01.A')
 
-            self.cryptomatte_02 = CryptoLayerMapping(R='cryptomatte02.R',
-                                                     G='cryptomatte02.G',
-                                                     B='cryptomatte02.B',
-                                                     A='cryptomatte02.A')
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
     """Change color space from linear RGB to sRGB colorspace.
