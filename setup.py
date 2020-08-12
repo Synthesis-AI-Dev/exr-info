@@ -15,7 +15,7 @@ with open("exr_info/__init__.py") as f:
 setup(
     name="exr_info",
     version=version,
-    python_requires=">=3.6.0",
+    python_requires="==3.8.0",
     install_requires=[
         "numpy==1.19.0",
     ],
