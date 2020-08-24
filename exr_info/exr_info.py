@@ -1,6 +1,16 @@
 """Data about the various channels in EXR files output by Synthesis' Blender and Vray render engines"""
 import enum
+from dataclasses import dataclass
+
 import numpy as np
+
+
+@dataclass
+class CryptoLayerMapping:
+    R: str
+    G: str
+    B: str
+    A: str
 
 
 class Renderer(enum.Enum):
@@ -13,14 +23,14 @@ class ExrChannels:
     Some channels are named differently in different renderers.
     Default values below according to VRay renderer.
 
-    Note: In Eevee, Cycles and Vray, the beauty pass (RGB image) is saved in sRGB colorspace, which is as normal.
-          Other passes (depth, normals, etc) are linear.
+    Note: In Blender and Vray, the beauty pass (RGB image) is saved in sRGB colorspace. Image files are normally
+          in sRGB. Other passes (depth, normals, etc) are linear RGB colorspace.
     """
     def __init__(self, renderer):
         """Set constants depending on renderer used
 
         Args:
-            renderer (str): Which renderer we're using. Default = 'vray'. Valid options present in const RENDERER.
+            renderer (Renderer): Which renderer we're using.
         """
         if not isinstance(renderer, Renderer):
             raise ValueError(f'Input renderer ({renderer}) must be of type enum {Renderer}')
@@ -31,11 +41,9 @@ class ExrChannels:
         self.depth = None
         self.face = None
         self.segment_id = None
-        # Cryptomatte - Note: 'cryptomatte' (without numerical suffix), is deprecated
-        # self.cryptomatte = {'00': {}, '01': {}, '02': {}}  # TODO: Refactor cryptomattes into dict of dicts
-        self.cryptomatte_00 = {'R': None, 'G': None, 'B': None, 'A': None}
-        self.cryptomatte_01 = {'R': None, 'G': None, 'B': None, 'A': None}
-        self.cryptomatte_02 = {'R': None, 'G': None, 'B': None, 'A': None}
+        # Cryptomatte - Note: 'cryptomatte' channel in EXR (without numerical suffix), is deprecated
+        # Note: The number of cryptomatte layers will depend on the "Level" of the cryptomatte (num_layers==ceil(level/2)).
+        self.cryptomatte = {'00': None, '01': None, '02': None}
         # Common
         self.normals = {
             'X': "normals.X",
@@ -61,20 +69,20 @@ class ExrChannels:
             self.face = "face.R"
             self.segment_id = "segmentindex.R"
 
-            self.cryptomatte_00['R'] = 'cryptomatte00.R'
-            self.cryptomatte_00['G'] = 'cryptomatte00.G'
-            self.cryptomatte_00['B'] = 'cryptomatte00.B'
-            self.cryptomatte_00['A'] = 'cryptomatte00.A'
+            cryptomatte_00 = CryptoLayerMapping(R='cryptomatte00.R',
+                                                G='cryptomatte00.G',
+                                                B='cryptomatte00.B',
+                                                A='cryptomatte00.A')
+            cryptomatte_01 = CryptoLayerMapping(R='cryptomatte01.R',
+                                                G='cryptomatte01.G',
+                                                B='cryptomatte01.B',
+                                                A='cryptomatte01.A')
+            cryptomatte_02 = CryptoLayerMapping(R='cryptomatte02.R',
+                                                G='cryptomatte02.G',
+                                                B='cryptomatte02.B',
+                                                A='cryptomatte02.A')
+            self.cryptomatte = {'00': cryptomatte_00, '01': cryptomatte_01, '02': cryptomatte_02}
 
-            self.cryptomatte_01['R'] = 'cryptomatte01.R'
-            self.cryptomatte_01['G'] = 'cryptomatte01.G'
-            self.cryptomatte_01['B'] = 'cryptomatte01.B'
-            self.cryptomatte_01['A'] = 'cryptomatte01.A'
-
-            self.cryptomatte_02['R'] = 'cryptomatte02.R'
-            self.cryptomatte_02['G'] = 'cryptomatte02.G'
-            self.cryptomatte_02['B'] = 'cryptomatte02.B'
-            self.cryptomatte_02['A'] = 'cryptomatte02.A'
 
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
