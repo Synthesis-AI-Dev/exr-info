@@ -1,9 +1,14 @@
 """Data about the various channels in EXR files output by Synthesis' Blender and Vray render engines"""
 import enum
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
+import OpenEXR
 
+HEADER_CRYPTOMATTE_IDENTIFIER = 'cryptomatte/'
+CHANNEL_CRYPTOMATTE_IDENTIFIER = 'cryptomatte00'
+HEADER_VRAY_IDENTIFIER = 'vrayInfo/'
 
 @dataclass
 class CryptoLayerMapping:
@@ -83,6 +88,62 @@ class ExrChannels:
                                                 A='cryptomatte02.A')
             self.cryptomatte = {'00': cryptomatte_00, '01': cryptomatte_01, '02': cryptomatte_02}
 
+
+class ExrInfo:
+    def __init__(self, exr_file: OpenEXR.InputFile):
+        """Get info about an exr image
+        Args:
+            exr_file (OpenEXR.InputFile): The opened EXR file object
+        """
+        self.exr_file = exr_file
+
+    @classmethod
+    def fromfilename(cls, filename: str):
+        """Initialize ExrInfo from a file"""
+        path_exr = Path(filename)
+        if not path_exr.is_file():
+            raise ValueError(f'Not a file: {path_exr}')
+        exr_file = OpenEXR.InputFile(str(path_exr))
+        return cls(exr_file)
+
+    def is_cryptomatte_present(self) -> bool:
+        """Check whether cryptomatte is present in the EXR image
+
+        Returns:
+            bool: True if cryptomatte layers present in the EXR
+        """
+        # Get the manifest (mapping of object names to hash ids)
+        header = self.exr_file.header()
+
+        cryptomatte_present = False
+        for key in header:
+            if HEADER_CRYPTOMATTE_IDENTIFIER in key:
+                cryptomatte_present = True
+
+                # Verify the cryptomatte channels are present
+                channels_str = 'Channels: \n'
+                channels_dict = header['channels']
+                cryptomatte_channel_present = False
+                for _key in channels_dict:
+                    channels_str += f'  {_key}: {channels_dict[_key]}\n'
+                    if CHANNEL_CRYPTOMATTE_IDENTIFIER in _key:
+                        cryptomatte_channel_present = True
+                if not cryptomatte_channel_present:
+                    raise ValueError(f'Cryptomatte detected, but cryptomatte channels not present in EXR:\n{channels_str}')
+
+                break
+
+        return cryptomatte_present
+
+    def identify_render_engine(self) -> Renderer:
+        header = self.exr_file.header()
+        render_engine = Renderer.BLENDER
+        for key in header:
+            if HEADER_VRAY_IDENTIFIER in key:
+                render_engine = Renderer.VRAY
+                break
+
+        return render_engine
 
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
