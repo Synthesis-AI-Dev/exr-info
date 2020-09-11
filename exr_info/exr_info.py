@@ -83,6 +83,7 @@ class ExrChannels:
         # Renderer Dependent
         self.alpha = None
         self.color = {'R': None, 'G': None, 'B': None}
+        self.color_denoised_vray = None  # Vray Only
         self.depth = None
         self.face = None
         self.segment_id = None
@@ -111,6 +112,9 @@ class ExrChannels:
             self.color['R'] = "R"
             self.color['G'] = "G"
             self.color['B'] = "B"
+            self.color_denoised_vray = {'R': 'effectsResult.R',
+                                        'G': 'effectsResult.G',
+                                        'B': 'effectsResult.B'}
             self.depth = "Z"
             self.face = "face.R"
             self.segment_id = "segmentindex.R"
