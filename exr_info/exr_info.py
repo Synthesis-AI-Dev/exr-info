@@ -17,6 +17,14 @@ class Renderer(enum.Enum):
     VRAY = 1
 
 
+@dataclass
+class CryptoLayerMapping:
+    R: str
+    G: str
+    B: str
+    A: str
+
+
 @enum.unique
 class ClassIdFace(enum.IntEnum):
     """Mappings of segments of face to IDs in output PNGs.
@@ -88,13 +96,6 @@ class ExrChannels:
             'Z': "normals.Z"
         }
 
-        @dataclass
-        class CryptoLayerMapping:
-            R: str
-            G: str
-            B: str
-            A: str
-
         if renderer == Renderer.BLENDER:
             self.alpha = "alpha.V"  # Don't use "RGBA.A", it is unreliable
             self.color['R'] = "RGBA.R"
@@ -106,6 +107,7 @@ class ExrChannels:
 
         elif renderer == Renderer.VRAY:
             self.alpha = "A"
+            # TODO: Change the color channel names if denoising is present?
             self.color['R'] = "R"
             self.color['G'] = "G"
             self.color['B'] = "B"
@@ -138,6 +140,7 @@ class ExrInfo:
             exr_file (OpenEXR.InputFile): The opened EXR file object
         """
         self.exr_file = exr_file
+        self.header = exr_file.header()
 
     @classmethod
     def fromfilename(cls, filename: str):
@@ -155,16 +158,14 @@ class ExrInfo:
             bool: True if cryptomatte layers present in the EXR
         """
         # Get the manifest (mapping of object names to hash ids)
-        header = self.exr_file.header()
-
         cryptomatte_present = False
-        for key in header:
+        for key in self.header:
             if HEADER_CRYPTOMATTE_IDENTIFIER in key:
                 cryptomatte_present = True
 
                 # Verify the cryptomatte channels are present
                 channels_str = 'Channels: \n'
-                channels_dict = header['channels']
+                channels_dict = self.header['channels']
                 cryptomatte_channel_present = False
                 for _key in channels_dict:
                     channels_str += f'  {_key}: {channels_dict[_key]}\n'
@@ -177,10 +178,27 @@ class ExrInfo:
 
         return cryptomatte_present
 
+    def is_vray_denoise_present(self) -> bool:
+        """Check whether the image was created using Vray denoising.
+
+        Denoising in Vray adds a number of additional channels to the EXR, such as effectsResult.RGB, defocusAmount,
+        noiseLevel, reflectionFilter.RGB, refractionFilter.RGB, etc.
+        The denoised RGB image is stored in the "effectsResult.RGB" channels
+
+        Returns:
+            bool: True, if effectsResult.R channel is present in the EXR
+        """
+        vray_denoise_present = False
+        for key in self.header['channels']:
+            if HEADER_VRAY_DENOISE_IDENTIFIER in key:
+                vray_denoise_present = True
+                break
+
+        return vray_denoise_present
+
     def identify_render_engine(self) -> Renderer:
-        header = self.exr_file.header()
         render_engine = Renderer.BLENDER
-        for key in header:
+        for key in self.header:
             if HEADER_VRAY_IDENTIFIER in key:
                 render_engine = Renderer.VRAY
                 break
