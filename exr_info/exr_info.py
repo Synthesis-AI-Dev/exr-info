@@ -9,18 +9,50 @@ import OpenEXR
 HEADER_CRYPTOMATTE_IDENTIFIER = 'cryptomatte/'
 CHANNEL_CRYPTOMATTE_IDENTIFIER = 'cryptomatte00'
 HEADER_VRAY_IDENTIFIER = 'vrayInfo/'
-
-@dataclass
-class CryptoLayerMapping:
-    R: str
-    G: str
-    B: str
-    A: str
+HEADER_VRAY_DENOISE_IDENTIFIER = 'effectsResult.R'
 
 
 class Renderer(enum.Enum):
     BLENDER = 0
     VRAY = 1
+
+
+@enum.unique
+class ClassIdFace(enum.IntEnum):
+    """Mappings of segments of face to IDs in output PNGs.
+    These also correspond to the layer name within the EXRs.
+    The segment layers are labelled as "segXX.R" within EXR and contain the mask for a single segment (nose, eyes, etc.)
+    Eg, mask for cheeks is stored in layer "seg01.R" in EXR.
+
+    Note: These mappings are for v3 of face data, corresponding to July 2020
+    """
+    BACKGROUND = 0
+    CHEEKS = 1
+    CHIN = 2
+    EARS = 3
+    EYES = 4
+    EYE_SOCKETS = 5
+    FOREHEAD = 6
+    HEAD = 7  # This is back of head.
+    JAW_UPPER = 8  # Was JAW pre July 2020
+    MOUTH = 9
+    MOUTH_BAG = 10  # Inside of mouth
+    NECK = 11
+    NOSE = 12
+    NOSTRILS = 13
+    SHOULDERS = 14
+    SMILE_LINE = 15
+    TEMPLES = 16
+    UNDERCHIN = 17
+    EYELASHES = 18
+    JAW_LOWER = 19  # Added in July 2020
+    TEETH = 20  # Added in July 2020
+    HAIR = 30
+    BEARD = 31
+    MUSTACHE = 32
+    GLASSES = 33
+    MASK = 34
+    HEADWEAR = 35
 
 
 class ExrChannels:
@@ -56,6 +88,13 @@ class ExrChannels:
             'Z': "normals.Z"
         }
 
+        @dataclass
+        class CryptoLayerMapping:
+            R: str
+            G: str
+            B: str
+            A: str
+
         if renderer == Renderer.BLENDER:
             self.alpha = "alpha.V"  # Don't use "RGBA.A", it is unreliable
             self.color['R'] = "RGBA.R"
@@ -87,6 +126,9 @@ class ExrChannels:
                                                 B='cryptomatte02.B',
                                                 A='cryptomatte02.A')
             self.cryptomatte = {'00': cryptomatte_00, '01': cryptomatte_01, '02': cryptomatte_02}
+
+        else:
+            raise ValueError(f'Unknown Renderer: {renderer}')
 
 
 class ExrInfo:
