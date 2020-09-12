@@ -2,6 +2,7 @@
 import enum
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import OpenEXR
@@ -144,6 +145,19 @@ class ExrInfo:
                 break
 
         return render_engine
+
+    def get_imsize(self) -> Tuple[int, int]:
+        """Get the height and width of image within and EXR file
+
+        Returns:
+            int, int: Height, Width of image
+        """
+        header = self.exr_file.header()
+        dw = header['dataWindow']
+        height = int(dw.max.y - dw.min.y + 1)
+        width = int(dw.max.x - dw.min.x + 1)
+
+        return height, width
 
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
