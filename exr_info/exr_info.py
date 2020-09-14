@@ -9,6 +9,13 @@ import OpenEXR
 HEADER_CRYPTOMATTE_IDENTIFIER = 'cryptomatte/'
 CHANNEL_CRYPTOMATTE_IDENTIFIER = 'cryptomatte00'
 HEADER_VRAY_IDENTIFIER = 'vrayInfo/'
+HEADER_VRAY_DENOISE_IDENTIFIER = 'effectsResult.R'
+
+
+class Renderer(enum.Enum):
+    BLENDER = 0
+    VRAY = 1
+
 
 @dataclass
 class CryptoLayerMapping:
@@ -18,9 +25,42 @@ class CryptoLayerMapping:
     A: str
 
 
-class Renderer(enum.Enum):
-    BLENDER = 0
-    VRAY = 1
+@enum.unique
+class ClassIdFace(enum.IntEnum):
+    """Mappings of segments of face to IDs in output PNGs.
+    These also correspond to the layer name within the EXRs.
+    The segment layers are labelled as "segXX.R" within EXR and contain the mask for a single segment (nose, eyes, etc.)
+    Eg, mask for cheeks is stored in layer "seg01.R" in EXR.
+
+    Note: These mappings are for v3 of face data, corresponding to July 2020
+    """
+    BACKGROUND = 0
+    CHEEKS = 1
+    CHIN = 2
+    EARS = 3
+    EYES = 4
+    EYE_SOCKETS = 5
+    FOREHEAD = 6
+    HEAD = 7  # This is back of head.
+    JAW_UPPER = 8  # Was JAW pre July 2020
+    MOUTH = 9
+    MOUTH_BAG = 10  # Inside of mouth
+    NECK = 11
+    NOSE = 12
+    NOSTRILS = 13
+    SHOULDERS = 14
+    SMILE_LINE = 15
+    TEMPLES = 16
+    UNDERCHIN = 17
+    EYELASHES = 18
+    JAW_LOWER = 19  # Added in July 2020
+    TEETH = 20  # Added in July 2020
+    HAIR = 30
+    BEARD = 31
+    MUSTACHE = 32
+    GLASSES = 33
+    MASK = 34
+    HEADWEAR = 35
 
 
 class ExrChannels:
@@ -43,6 +83,7 @@ class ExrChannels:
         # Renderer Dependent
         self.alpha = None
         self.color = {'R': None, 'G': None, 'B': None}
+        self.color_denoised_vray = None  # Vray Only
         self.depth = None
         self.face = None
         self.segment_id = None
@@ -67,9 +108,13 @@ class ExrChannels:
 
         elif renderer == Renderer.VRAY:
             self.alpha = "A"
+            # TODO: Change the color channel names if denoising is present?
             self.color['R'] = "R"
             self.color['G'] = "G"
             self.color['B'] = "B"
+            self.color_denoised_vray = {'R': 'effectsResult.R',
+                                        'G': 'effectsResult.G',
+                                        'B': 'effectsResult.B'}
             self.depth = "Z"
             self.face = "face.R"
             self.segment_id = "segmentindex.R"
@@ -88,6 +133,9 @@ class ExrChannels:
                                                 A='cryptomatte02.A')
             self.cryptomatte = {'00': cryptomatte_00, '01': cryptomatte_01, '02': cryptomatte_02}
 
+        else:
+            raise ValueError(f'Unknown Renderer: {renderer}')
+
 
 class ExrInfo:
     def __init__(self, exr_file: OpenEXR.InputFile):
@@ -96,6 +144,7 @@ class ExrInfo:
             exr_file (OpenEXR.InputFile): The opened EXR file object
         """
         self.exr_file = exr_file
+        self.header = exr_file.header()
 
     @classmethod
     def fromfilename(cls, filename: str):
@@ -113,16 +162,14 @@ class ExrInfo:
             bool: True if cryptomatte layers present in the EXR
         """
         # Get the manifest (mapping of object names to hash ids)
-        header = self.exr_file.header()
-
         cryptomatte_present = False
-        for key in header:
+        for key in self.header:
             if HEADER_CRYPTOMATTE_IDENTIFIER in key:
                 cryptomatte_present = True
 
                 # Verify the cryptomatte channels are present
                 channels_str = 'Channels: \n'
-                channels_dict = header['channels']
+                channels_dict = self.header['channels']
                 cryptomatte_channel_present = False
                 for _key in channels_dict:
                     channels_str += f'  {_key}: {channels_dict[_key]}\n'
@@ -135,10 +182,27 @@ class ExrInfo:
 
         return cryptomatte_present
 
+    def is_vray_denoise_present(self) -> bool:
+        """Check whether the image was created using Vray denoising.
+
+        Denoising in Vray adds a number of additional channels to the EXR, such as effectsResult.RGB, defocusAmount,
+        noiseLevel, reflectionFilter.RGB, refractionFilter.RGB, etc.
+        The denoised RGB image is stored in the "effectsResult.RGB" channels
+
+        Returns:
+            bool: True, if effectsResult.R channel is present in the EXR
+        """
+        vray_denoise_present = False
+        for key in self.header['channels']:
+            if HEADER_VRAY_DENOISE_IDENTIFIER in key:
+                vray_denoise_present = True
+                break
+
+        return vray_denoise_present
+
     def identify_render_engine(self) -> Renderer:
-        header = self.exr_file.header()
         render_engine = Renderer.BLENDER
-        for key in header:
+        for key in self.header:
             if HEADER_VRAY_IDENTIFIER in key:
                 render_engine = Renderer.VRAY
                 break
