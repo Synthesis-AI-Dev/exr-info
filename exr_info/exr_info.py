@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
 
+import Imath
 import numpy as np
 import OpenEXR
 
@@ -16,6 +17,11 @@ HEADER_VRAY_DENOISE_IDENTIFIER = 'effectsResult.R'
 class Renderer(enum.Enum):
     BLENDER = 0
     VRAY = 1
+
+
+class ExrDtype(enum.Enum):
+    FLOAT32 = 0
+    FLOAT16 = 1
 
 
 @dataclass
@@ -146,6 +152,8 @@ class ExrInfo:
         """
         self.exr_file = exr_file
         self.header = exr_file.header()
+        self.height = None
+        self.width = None
 
     @classmethod
     def fromfilename(cls, filename: str):
@@ -216,12 +224,36 @@ class ExrInfo:
         Returns:
             int, int: Height, Width of image
         """
-        header = self.exr_file.header()
-        dw = header['dataWindow']
-        height = int(dw.max.y - dw.min.y + 1)
-        width = int(dw.max.x - dw.min.x + 1)
+        if self.height is None or self.width is None:
+            dw = self.header['dataWindow']
+            self.height = int(dw.max.y - dw.min.y + 1)
+            self.width = int(dw.max.x - dw.min.x + 1)
 
-        return height, width
+        return self.height, self.width
+
+    def exr_channel_to_numpy(self, channel_name: str, dtype: ExrDtype = ExrDtype.FLOAT32) -> np.ndarray:
+        """Extracts a channel in an EXR file into a numpy array
+
+        Args:
+            channel_name (str): The name of the channel to be converted to numpy
+            dtype (ExrDtype): Whether the data in channel is of float32 or float16 type
+
+        Returns:
+            numpy.ndarray: The extracted channel in form of numpy array with dtype as specified in input parameter.
+                           Shape: (H, W).
+        """
+        if dtype == ExrDtype.FLOAT32:
+            point_type = Imath.PixelType(Imath.PixelType.FLOAT)
+            np_type = np.float32
+        else:
+            point_type = Imath.PixelType(Imath.PixelType.HALF)
+            np_type = np.float16
+
+        channel_arr = np.frombuffer(self.exr_file.channel(channel_name, point_type), dtype=np_type)
+        height, width = self.get_imsize()
+        channel_arr = channel_arr.reshape((height, width))
+
+        return channel_arr
 
 
 def lin_rgb_to_srgb_colorspace(img_lin_rgb):
