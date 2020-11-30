@@ -181,7 +181,7 @@ class ExrInfo:
                 channels_dict = self.header['channels']
                 cryptomatte_channel_present = False
                 for _key in channels_dict:
-                    channels_str += f'  {_key}: {channels_dict[_key]}\n'
+                    channels_str += f'  {_key}: {channels_dict[_key]}\n'  # For printing the list of all channels
                     if CHANNEL_CRYPTOMATTE_IDENTIFIER in _key:
                         cryptomatte_channel_present = True
                 if not cryptomatte_channel_present:
