@@ -1,7 +1,8 @@
 """Data about the various channels in EXR files output by Synthesis' Blender and Vray render engines"""
 import enum
 import fnmatch
-from collections import namedtuple
+import json
+from collections import namedtuple, OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, List, Optional, Tuple
@@ -313,7 +314,15 @@ class ExrInfo:
 
         return crypto_defs
 
-    def get_cryptomatte_channels(self, crypto_def: CryptoDef):
+    def get_cryptomatte_manifest(self, crypto_def: CryptoDef) -> OrderedDict:
+        """Get the manifest from EXR header for given cryptomatte definition
+        The manifest contains all the objects represented within the cryptomatte and its associated unique ID.
+        """
+        manifest_key = f"cryptomatte/{crypto_def.id}/manifest"
+        manifest = json.loads(self.header[manifest_key], object_pairs_hook=OrderedDict)
+        return manifest
+
+    def get_cryptomatte_channels(self, crypto_def: CryptoDef) -> List[str]:
         """Extract list of all the cryptomatte channels, sorted by layer and in order RGBA per layer.
         The ordered channels are used to extract the object masks from a cryptomatte.
 
@@ -330,7 +339,7 @@ class ExrInfo:
         return crypto_channels
 
     @staticmethod
-    def _channel_sort_dictionary(key):
+    def _channel_sort_dictionary(key: str):
         if key == 'R' or key == 'r':
             return "0000000001"
         elif key == 'G' or key == 'g':
@@ -342,8 +351,8 @@ class ExrInfo:
         else:
             return key
 
-    def _channel_sort_key(self, i):
-        return [self._channel_sort_dictionary(x) for x in i.split(".")]
+    def _channel_sort_key(self, chan_name):
+        return [self._channel_sort_dictionary(x) for x in chan_name.split(".")]
 
     def is_vray_denoise_present(self) -> bool:
         """Check whether the image was created using Vray denoising.
