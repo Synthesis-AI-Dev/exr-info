@@ -37,102 +37,6 @@ numpy_dtype = {
 }
 
 
-@dataclass
-class CryptoLayerMapping:
-    R: str
-    G: str
-    B: str
-    A: str
-
-
-@enum.unique
-class ClassIdFace(enum.IntEnum):
-    """Mappings of segments of face to IDs in output PNGs.
-    These also correspond to the layer name within the EXRs.
-    The segment layers are labelled as "segXX.R" within EXR and contain the mask for a single segment (nose, eyes, etc.)
-    Eg, mask for cheeks is stored in layer "seg01.R" in EXR.
-
-    Note: These mappings are for v3 of face data, corresponding to July 2020
-    """
-
-    BACKGROUND = 0
-    CHEEKS = 1
-    CHIN = 2
-    EARS = 3
-    EYES = 4
-    EYE_SOCKETS = 5
-    FOREHEAD = 6
-    HEAD = 7  # This is back of head.
-    JAW_UPPER = 8  # Was JAW pre July 2020
-    MOUTH = 9
-    MOUTH_BAG = 10  # Inside of mouth
-    NECK = 11
-    NOSE = 12
-    NOSTRILS = 13
-    SHOULDERS = 14
-    SMILE_LINE = 15
-    TEMPLES = 16
-    UNDERCHIN = 17
-    EYELASHES = 18
-    JAW_LOWER = 19  # Added in July 2020
-    TEETH = 20  # Added in July 2020
-    HAIR = 30
-    BEARD = 31
-    MUSTACHE = 32
-    GLASSES = 33
-    MASK = 34
-    HEADWEAR = 35
-
-
-@enum.unique
-class ClassIdFace(enum.IntEnum):
-    """Mappings of segments of face to IDs in output PNGs.
-    These also correspond to the layer name within the EXRs.
-    The segment layers are labelled as "segXX.R" within EXR and contain the mask for a single segment (nose, eyes, etc.)
-    Eg, mask for cheeks is stored in layer "seg01.R" in EXR.
-
-    Note: These mappings are for v3 of face data, corresponding to July 2020
-    """
-
-    BACKGROUND = 0  # This is inside of mouth and empty eyes (when background is seen through eyes)
-    BROW = 1
-    CHEEK_LEFT = 2
-    CHEEK_RIGHT = 3
-    CHIN = 4
-    EAR_LEFT = 5
-    EAR_RIGHT = 6
-    EYE_LEFT = 7  # This is back of head. Doesn't include face
-    EYE_RIGHT = 8
-    EYELASHES = 9
-    EYELID = 10  # Inside of mouth
-    EYES = 11
-    FOREHEAD = 12
-    HEAD = 13
-    JAW = 14
-    JOWL = 15
-    LIP_LOWER = 16
-    LIP_UPPER = 17
-    MOUTH = 18
-    MOUTHBAG = 19
-    NECK = 20
-    NOSE = 21
-    NOSE_OUTER = 22
-    NOSTRILS = 23
-    SHOULDERS = 24
-    SMILE_LINE = 25
-    TEETH = 26
-    TEMPLES = 27
-    TONGUE = 28
-    UNDEREYE = 29
-
-    HAIR = 100
-    BEARD = 101
-    MUSTACHE = 102
-    GLASSES = 103
-    MASK = 104
-    HEADWEAR = 105
-
-
 class ExrChannels:
     """This class defines constants to identify channels in the header of the EXR files we render.
     Some channels are named differently in different renderers.
@@ -153,52 +57,23 @@ class ExrChannels:
 
         # Renderer Dependent
         self.alpha = None
-        self.color = {"R": None, "G": None, "B": None}
-        self.color_denoised_vray = None  # Vray Only
+        self.rgb = None
+        self.rgb_denoised_vray = None  # Vray Only. If denoising present, denoised RGB stored in different channels.
         self.depth = None
-        self.face = None
-        self.segment_id = None
-        # Cryptomatte - Note: 'cryptomatte' channel in EXR (without numerical suffix), is deprecated
-        # Note: The number of cryptomatte layers will depend on the "Level" of the cryptomatte (num_layers==ceil(level/2)).
-        self.cryptomatte = {"00": None, "01": None, "02": None}
-        # Common
-        self.normals = {"X": "normals.X", "Y": "normals.Y", "Z": "normals.Z"}
+        self.normals = None
 
         if renderer == Renderer.BLENDER:
-            self.alpha = "alpha.V"  # Don't use "RGBA.A", it is unreliable
-            self.color["R"] = "RGBA.R"
-            self.color["G"] = "RGBA.G"
-            self.color["B"] = "RGBA.B"
-            self.depth = "Z.V"
-            self.face = "face.V"
-            self.segment_id = "segmentindex.V"
+            self.rgb = ["RGBA.R", "RGBA.G", "RGBA.B"]
+            self.alpha = ["alpha.V"]  # Don't use "RGBA.A", it is unreliable
+            self.depth = ["Z.V"]
+            self.normals = ["normals.X", "normals.Y", "normals.Z"]
 
         elif renderer == Renderer.VRAY:
-            self.alpha = "A"
-            # TODO: Change the color channel names if denoising is present?
-            self.color["R"] = "R"
-            self.color["G"] = "G"
-            self.color["B"] = "B"
-            self.color_denoised_vray = {"R": "effectsResult.R", "G": "effectsResult.G", "B": "effectsResult.B"}
-            self.depth = "Z"
-            self.face = "face.R"
-            self.segment_id = "segmentindex.R"
-
-            # Cryptomatte can posses more than one cryptomatte.
-            # TODO: Multiple cryptomatte definitions can be present in file. Add methods to recognise presence of
-            #       multiple definitions and extract a crypto from each. Each def will have it's own manifest, name and
-            #       7-char identifier. Eg: cryptomatte/881c23b/conversion, cryptomatte/881c23b/hash,
-            #       cryptomatte/881c23b/manifest, cryptomatte/881c23b/name
-            cryptomatte_00 = CryptoLayerMapping(
-                R="cryptomatte00.R", G="cryptomatte00.G", B="cryptomatte00.B", A="cryptomatte00.A"
-            )
-            cryptomatte_01 = CryptoLayerMapping(
-                R="cryptomatte01.R", G="cryptomatte01.G", B="cryptomatte01.B", A="cryptomatte01.A"
-            )
-            cryptomatte_02 = CryptoLayerMapping(
-                R="cryptomatte02.R", G="cryptomatte02.G", B="cryptomatte02.B", A="cryptomatte02.A"
-            )
-            self.cryptomatte = {"00": cryptomatte_00, "01": cryptomatte_01, "02": cryptomatte_02}
+            self.rgb = ["R", "G", "B"]
+            self.rgb_denoised_vray = ["effectsResult.R", "effectsResult.G", "effectsResult.B"]
+            self.alpha = ["A"]
+            self.depth = ["Z"]
+            self.normals = ["normals.X", "normals.Y", "normals.Z"]
 
         else:
             raise ValueError(f"Unknown Renderer: {renderer}")
@@ -226,7 +101,6 @@ class ExrInfo:
         self.width = int(dw.max.x - dw.min.x + 1)
         self.channels_dict = self.header["channels"]
         self.channels = list(self.channels_dict.keys())
-
         self.renderer = self.identify_render_engine()
 
     @classmethod
