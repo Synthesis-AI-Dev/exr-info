@@ -64,15 +64,15 @@ class ExrChannels:
 
         if renderer == Renderer.BLENDER:
             self.rgb = ["RGBA.R", "RGBA.G", "RGBA.B"]
-            self.alpha = ["alpha.V"]  # Don't use "RGBA.A", it is unreliable
-            self.depth = ["Z.V"]
+            self.alpha = "alpha.V"  # Don't use "RGBA.A", it is unreliable
+            self.depth = "Z.V"
             self.normals = ["normals.X", "normals.Y", "normals.Z"]
 
         elif renderer == Renderer.VRAY:
             self.rgb = ["R", "G", "B"]
             self.rgb_denoised_vray = ["effectsResult.R", "effectsResult.G", "effectsResult.B"]
-            self.alpha = ["A"]
-            self.depth = ["Z"]
+            self.alpha = "A"
+            self.depth = "Z"
             self.normals = ["normals.X", "normals.Y", "normals.Z"]
 
         else:
@@ -245,8 +245,10 @@ class ExrInfo:
 
     def identify_render_engine(self) -> Renderer:
         """Identify which render engine was used to render an EXR"""
-        VRAY_IDENTIFIER = "vrayInfo/"
-        if VRAY_IDENTIFIER in list(self.header.keys()):
+        VRAY_IDENTIFIER = "vrayInfo/*"
+        vray_info = fnmatch.filter(list(self.header.keys()), VRAY_IDENTIFIER)
+
+        if len(vray_info) > 0:
             render_engine = Renderer.VRAY
         else:
             render_engine = Renderer.BLENDER
@@ -268,6 +270,14 @@ class ExrInfo:
             channels_str += f"  {_key}: {self.channels_dict[_key].type}\n"
 
         return channels_str
+
+    def get_header_str(self):
+        """Get the list of channels as a string for printing"""
+        header_str = "Header: \n"
+        for key, val in self.header.items():
+            header_str += f"  {key}: {val}\n"
+
+        return header_str
 
     def get_channel_precision(self, channel_name: str) -> ExrDtype:
         """Get the precision of a channel within the EXR"""
@@ -297,6 +307,7 @@ class ExrInfo:
         np_type = numpy_dtype[chan_dtype]
         channel_arr = np.frombuffer(self.exr_file.channel(channel_name), dtype=np_type)
         channel_arr = channel_arr.reshape((self.height, self.width))
+        channel_arr = channel_arr.copy()  # Arrays read from buffers can be read-only
 
         if cast_dtype is not None:
             channel_arr = channel_arr.astype(np_type[cast_dtype])
@@ -328,7 +339,7 @@ class ExrInfo:
             if cast_dtype is not None:
                 channel_arr = channel_arr.astype(np_type[cast_dtype])
 
-            channels_list.append(channel_arr)
+            channels_list.append(channel_arr.copy())  # Arrays read from buffers can be read-only
 
         return channels_list
 
