@@ -310,7 +310,9 @@ class ExrInfo:
         channel_arr = channel_arr.copy()  # Arrays read from buffers can be read-only
 
         if cast_dtype is not None:
-            channel_arr = channel_arr.astype(np_type[cast_dtype])
+            if not isinstance(cast_dtype, ExrDtype):
+                raise ValueError(f"Expected type {ExrDtype.__name__}. Got: {type(cast_dtype)}")
+            channel_arr = channel_arr.astype(numpy_dtype[cast_dtype])
 
         return channel_arr
 
@@ -325,19 +327,21 @@ class ExrInfo:
             list(np.ndarray): A list of the extracted channels in numpy, with dtype inferred from information in header.
                               Shape: [H, W]
         """
+        # TODO: Can be made more efficient by reading all channels at once: https://excamera.com/articles/26/doc/openexr.html#OpenEXR.InputFile.channels
         channel_dtypes = []
         for channel_name in channel_names:
             channel_dtypes.append(self.get_channel_precision(channel_name))
 
-        channels_tup = self.exr_file.channels(channel_names)
-
         channels_list = []
-        for chan_name, chan_str, chan_dtype in zip(channel_names, channels_tup, channel_dtypes):
+        for chan_name, chan_dtype in zip(channel_names, channel_dtypes):
             np_type = numpy_dtype[chan_dtype]
             channel_arr = np.frombuffer(self.exr_file.channel(chan_name), dtype=np_type)
             channel_arr = channel_arr.reshape((self.height, self.width))
+
             if cast_dtype is not None:
-                channel_arr = channel_arr.astype(np_type[cast_dtype])
+                if not isinstance(cast_dtype, ExrDtype):
+                    raise ValueError(f"Expected type {ExrDtype.__name__}. Got: {type(cast_dtype)}")
+                channel_arr = channel_arr.astype(numpy_dtype[cast_dtype])
 
             channels_list.append(channel_arr.copy())  # Arrays read from buffers can be read-only
 
