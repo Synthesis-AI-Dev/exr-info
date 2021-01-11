@@ -61,6 +61,7 @@ class ExrChannels:
         self.rgb_denoised_vray = None  # Vray Only. If denoising present, denoised RGB stored in different channels.
         self.depth = None
         self.normals = None
+        self.normals_corrective_factor = None  # Vray only
 
         if renderer == Renderer.BLENDER:
             self.rgb = ["RGBA.R", "RGBA.G", "RGBA.B"]
@@ -74,6 +75,9 @@ class ExrChannels:
             self.alpha = "A"
             self.depth = "Z"
             self.normals = ["normals.X", "normals.Y", "normals.Z"]
+            # Vray uses left-handed coord system for normals. Correct it by multiplying each normals channel with
+            # the corresponding factor.
+            self.normals_corrective_factor = [-1.0, 1.0, 1.0]
 
         else:
             raise ValueError(f"Unknown Renderer: {renderer}")

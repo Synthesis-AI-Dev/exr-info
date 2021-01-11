@@ -11,6 +11,12 @@ from exr_info import ExrInfo
 
 class Crypto:
     def __init__(self, exr_f: ExrInfo):
+        """
+        Extract the segment maps from the cryptomatte within an EXR.
+
+        Args:
+            exr_f (exr_info.ExrInfo): An ExrInfo object.
+        """
         if not isinstance(exr_f, ExrInfo):
             raise ValueError(f"Expect exr_f of type {ExrInfo.__name__}. Got: {type(exr_f)}")
         self.exr_f = exr_f
@@ -18,8 +24,7 @@ class Crypto:
         if len(self.definitions) > 1:
             raise ValueError(
                 f"Multiple cryptomatte definitions not supported. "
-                f"Found {len(self.definitions)} definitions: \n"
-                f"  {self.definitions}"
+                f"Found {len(self.definitions)} definitions:\n  {self.definitions}"
             )
 
         # In the manifest, some entried are added by vray, which should be ignored.
@@ -27,7 +32,9 @@ class Crypto:
 
     @staticmethod
     def get_coverage_for_rank(float_id: float, cr_combined: np.ndarray, rank: int) -> np.ndarray:
-        """Get the coverage mask for a given rank from cryptomatte layers
+        """
+        Get the coverage mask for a given rank from cryptomatte layers
+
         Args:
             float_id (float32): The ID of the object
             cr_combined (numpy.ndarray): The cryptomatte layers combined into a single array along the channels axis.
@@ -49,7 +56,9 @@ class Crypto:
         return float_val
 
     def get_mask_for_id(self, obj_hex_id: str, channels_arr: np.ndarray, level: int = 6) -> np.ndarray:
-        """Extract mask corresponding to a float id from the cryptomatte layers
+        """
+        Extract mask corresponding to a float id from the cryptomatte layers
+
         Args:
             obj_hex_id (str): The ID of the object (from manifest).
             channels_arr (numpy.ndarray): The cryptomatte layers combined into a single array along the channels axis.
@@ -75,6 +84,13 @@ class Crypto:
         return mask
 
     def get_masks_for_all_objs(self, crypto_def_idx) -> OrderedDict:
+        """
+        Get an individual mask of every object in the cryptomatte
+
+        Returns:
+            collections.OrderedDict(str, numpy.ndarray): Mapping from the name of each object to it's anti-aliased mask.
+                For mask -> Shape: [H, W], dtype: uint8
+        """
         crypto_def = self.definitions[crypto_def_idx]
 
         manifest = self.exr_f.get_cryptomatte_manifest(crypto_def)
@@ -102,7 +118,19 @@ class Crypto:
 
         return obj_masks
 
-    def get_combined_mask(self, crypto_def_idx: int = 0) -> Tuple[np.ndarray, np.ndarray, Dict[str, int]]:
+    def get_combined_mask(self, crypto_def_idx: int = 0) -> Tuple[np.ndarray, Dict[str, int]]:
+        """
+        Get a single mask representing all the objects within the scene.
+        Each object is represented by a unique integer value, starting from 1. 0 is reserved for background.
+
+        Args:
+            crypto_def_idx: The index of the cryptomatte whose mask to extract (starting from 0).
+                            An EXR can contain multiple cryptomattes.
+
+        Returns:
+            numpy.ndarray: Mask of all objects. Shape: [H, W], dtype: np.uint16.
+            dict: Mapping of the object names to mask IDs for this image.
+        """
         obj_masks = self.get_masks_for_all_objs(crypto_def_idx)
 
         # Create a map of obj names to ids
@@ -117,12 +145,16 @@ class Crypto:
         background_mask = 255 - masks.sum(axis=0)
         masks = np.concatenate((np.expand_dims(background_mask, 0), masks), axis=0)
         mask_combined = masks.argmax(axis=0)
+        mask_combined = mask_combined.astype(np.uint16)
 
         return mask_combined, name_to_mask_id_map
 
     @staticmethod
-    def apply_random_colormap_to_mask(mask_combined):
-        """Apply random colors to each segment in the mask, for visualization"""
+    def apply_random_colormap_to_mask(mask_combined: np.ndarray) -> np.ndarray:
+        """
+        Apply random colors to each segment in the mask, for visualization
+        """
+
         def random_color() -> List:
             hue = random.random()
             sat, val = 0.7, 0.7
