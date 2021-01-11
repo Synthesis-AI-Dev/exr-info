@@ -365,6 +365,7 @@ def lin_rgb_to_srgb_colorspace(img_lin_rgb: np.ndarray):
         raise ValueError(f"Invalid dtype: {img_lin_rgb.dtype}. dtype of input must be one of: {valid_dtypes}")
 
     img_srgb = np.where(img_lin_rgb <= 0.0031308, img_lin_rgb * 12.92, 1.055 * np.power(img_lin_rgb, 1 / 2.4) - 0.055)
+    img_srgb = np.clip(img_srgb, a_min=0.0, a_max=1.0)
 
     return img_srgb
 
@@ -389,4 +390,6 @@ def lin_rgb_to_srgb_reinhard_tonemapping(
     """
     tonemapReinhard = cv2.createTonemapReinhard(gamma, intensity, light_adapt, color_adapt)
     ldr_img = tonemapReinhard.process(img_float_lin)
+    ldr_img = np.clip(ldr_img, a_min=0.0, a_max=1.0)
+
     return ldr_img
