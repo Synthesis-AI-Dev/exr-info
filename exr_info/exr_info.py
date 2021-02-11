@@ -75,7 +75,8 @@ class ExrChannels:
             self.alpha = "A"
             self.depth = "Z"
             self.normals = ["normals.X", "normals.Y", "normals.Z"]
-            # Vray uses left-handed coord system for normals. Correct it by multiplying each normals channel with
+            # Vray uses left-handed coord system for normals: X-left, Y-up, Z-behind. We use a
+            # right-hand system: X-right, Y-up, Z-behind. Correct it by multiplying each normals channel with
             # the corresponding factor.
             self.normals_corrective_factor = [-1.0, 1.0, 1.0]
 
