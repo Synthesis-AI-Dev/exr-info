@@ -29,6 +29,7 @@ class Crypto:
 
         # In the manifest, some entried are added by vray, which should be ignored.
         self.IGNORE_OBJS_IN_MANIFEST = ["vrayLightDome", "vrayLightMesh", "default"]
+        self.obj_masks = None  # Save the extracted masks of all objects. Might be used by both alpha and segments.
 
     @staticmethod
     def get_coverage_for_rank(float_id: float, cr_combined: np.ndarray, rank: int) -> np.ndarray:
@@ -69,7 +70,7 @@ class Crypto:
                          will change depending on level.
 
         Returns:
-            numpy.ndarray: Mask from cryptomatte for a given id. Dtype: np.uint8, Range: [0, 255]
+            numpy.ndarray: Mask from cryptomatte for a given id. dtype: np.float32, Range: [0, 1]
         """
         float_id = self._convert_hex_id_to_float_id(obj_hex_id)
 
@@ -80,7 +81,11 @@ class Crypto:
 
         coverage = sum(coverage_list)
         coverage = np.clip(coverage, 0.0, 1.0)
-        mask = (coverage * 255).astype(np.uint8)
+        mask = coverage.astype(np.float32)
+
+        # Note: Max value of coverage was 1.0002, which rounded to 1.0 when casting to float16. Might imply that the
+        # actual data is float16.
+
         return mask
 
     def get_masks_for_all_objs(self, crypto_def_idx) -> OrderedDict:
@@ -118,7 +123,7 @@ class Crypto:
 
         return obj_masks
 
-    def get_combined_mask(self, crypto_def_idx: int = 0) -> Tuple[np.ndarray, Dict[str, int]]:
+    def get_segments_map(self, crypto_def_idx: int = 0) -> Tuple[np.ndarray, Dict[str, int]]:
         """
         Get a single mask representing all the objects within the scene.
         Each object is represented by a unique integer value, starting from 1. 0 is reserved for background.
@@ -131,23 +136,35 @@ class Crypto:
             numpy.ndarray: Mask of all objects. Shape: [H, W], dtype: np.uint16.
             dict: Mapping of the object names to mask IDs for this image.
         """
-        obj_masks = self.get_masks_for_all_objs(crypto_def_idx)
+        if self.obj_masks is None:
+            self.obj_masks = self.get_masks_for_all_objs(crypto_def_idx)
 
         # Create a map of obj names to ids
         name_to_mask_id_map = OrderedDict()
         name_to_mask_id_map["background"] = 0  # Background is always class 0
-        obj_names = obj_masks.keys()
+        obj_names = self.obj_masks.keys()
         for idx, obj_name in enumerate(obj_names):
             name_to_mask_id_map[obj_name] = idx + 1
 
         # Combine all the masks into single mask without anti-aliasing for semantic segmentation
-        masks = np.stack(list(obj_masks.values()), axis=0)  # Shape: [N, H, W]
-        background_mask = 255 - masks.sum(axis=0)
+        # Use argmax to find which class each pixel belongs to.
+        masks = np.stack(list(self.obj_masks.values()), axis=0)  # Shape: [N, H, W]
+        background_mask = 1.0 - masks.sum(axis=0)
         masks = np.concatenate((np.expand_dims(background_mask, 0), masks), axis=0)
         mask_combined = masks.argmax(axis=0)
-        mask_combined = mask_combined.astype(np.uint16)
+
+        # Convert to uint
+        mask_combined = (mask_combined * 255).astype(np.uint16)
 
         return mask_combined, name_to_mask_id_map
+
+    def get_alpha_map(self, crypto_def_idx: int = 0) -> np.ndarray:
+        if self.obj_masks is None:
+            self.obj_masks = self.get_masks_for_all_objs(crypto_def_idx)
+
+        masks = np.stack(list(self.obj_masks.values()), axis=0)  # Shape: [N, H, W]
+        alpha = np.sum(masks, axis=0)
+        return alpha
 
     @staticmethod
     def apply_random_colormap_to_mask(mask_combined: np.ndarray) -> np.ndarray:
