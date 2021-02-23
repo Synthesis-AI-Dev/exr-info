@@ -333,6 +333,7 @@ class ExrInfo:
                               Shape: [H, W]
         """
         # TODO: Can be made more efficient by reading all channels at once: https://excamera.com/articles/26/doc/openexr.html#OpenEXR.InputFile.channels
+        # Get the precision (dtype) of each channel in exr from the exr header.
         channel_dtypes = []
         for channel_name in channel_names:
             channel_dtypes.append(self.get_channel_precision(channel_name))
@@ -344,6 +345,7 @@ class ExrInfo:
             channel_arr = channel_arr.reshape((self.height, self.width))
 
             if cast_dtype is not None:
+                # Forcefully cast array to a given datatype
                 if not isinstance(cast_dtype, ExrDtype):
                     raise ValueError(f"Expected type {ExrDtype.__name__}. Got: {type(cast_dtype)}")
                 channel_arr = channel_arr.astype(numpy_dtype[cast_dtype])
