@@ -30,7 +30,7 @@ class Crypto:
             # Apple requires multiple cryptomatte definitions. However, the original definition, named
             # "cryptomatte" is unchanged. We get the segments for the segments.png file from this definition only.
             # Ignore all definitions apart from the one named "cryptomatte"
-            print('WARNING: Multiple cryptomatte definitions found. Ignoring all except the definition named '
+            print('\nWARNING: Multiple cryptomatte definitions found. Ignoring all except the definition named '
                   '"cryptomatte".')
             for crypto_def in self.definitions:
                 if crypto_def.name != 'cryptomatte':
