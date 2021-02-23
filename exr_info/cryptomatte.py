@@ -22,12 +22,22 @@ class Crypto:
         self.exr_f = exr_f
         self.definitions = self.exr_f.get_cryptomatte_definitions()
         if len(self.definitions) > 1:
-            raise ValueError(
-                f"Multiple cryptomatte definitions not supported. "
-                f"Found {len(self.definitions)} definitions:\n  {self.definitions}"
-            )
+            # raise ValueError(
+            #     f"Multiple cryptomatte definitions not supported. "
+            #     f"Found {len(self.definitions)} definitions:\n  {self.definitions}"
+            # )
 
-        # In the manifest, some entried are added by vray, which should be ignored.
+            # Apple requires multiple cryptomatte definitions. However, the original definition, named
+            # "cryptomatte" is unchanged. We get the segments for the segments.png file from this definition only.
+            # Ignore all definitions apart from the one named "cryptomatte"
+            print('WARNING: Multiple cryptomatte definitions found. Ignoring all except the definition named '
+                  '"cryptomatte".')
+            for crypto_def in self.definitions:
+                if crypto_def.name != 'cryptomatte':
+                    self.definitions.remove(crypto_def)
+
+        # In the manifest, some entries are automatically added by vray, which should be ignored.
+        # "default" should contain all the regions which have not been explicitly assigned a value in the cryptomatte.
         self.IGNORE_OBJS_IN_MANIFEST = ["vrayLightDome", "vrayLightMesh", "default"]
 
     @staticmethod
