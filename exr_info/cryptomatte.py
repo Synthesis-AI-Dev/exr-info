@@ -117,17 +117,19 @@ class Crypto:
 
         return obj_masks
 
-    def get_combined_mask(self) -> Tuple[np.ndarray, Dict[str, int]]:
+    def get_combined_mask(self, crypto_def_name: str) -> Tuple[np.ndarray, Dict[str, int]]:
         """
         Get a single mask for semantic segmentation representing all the objects within the scene.
         Each object is represented by a unique integer value, starting from 1. 0 is reserved for background.
+
+        Args:
+            crypto_def_name: The name of the cryptomatte definition from which to extract masks
 
         Returns:
             numpy.ndarray: Mask of all objects. Shape: [H, W], dtype: np.uint16.
             dict: Mapping of the object names to mask IDs for this image.
         """
-        segmentation_crypto_name = "segmentation"
-        obj_masks = self.get_masks_for_all_objs(segmentation_crypto_name)
+        obj_masks = self.get_masks_for_all_objs(crypto_def_name)
 
         # Create a map of obj names to ids
         name_to_mask_id_map = OrderedDict()
