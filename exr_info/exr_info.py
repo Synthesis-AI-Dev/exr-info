@@ -134,7 +134,7 @@ class ExrInfo:
             return False
         return True
 
-    def get_cryptomatte_definitions(self) -> Dict[CryptoDef]:
+    def get_cryptomatte_definitions(self) -> Dict[str, CryptoDef]:
         r"""Get the name and ID of all cryptomatte definitions present in EXR
 
         A render can contain multiple cryptomattes (each is referred to as a cryptomatte definition). A render engine
