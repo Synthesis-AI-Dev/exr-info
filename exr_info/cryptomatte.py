@@ -21,20 +21,6 @@ class Crypto:
             raise ValueError(f"Expect exr_f of type {ExrInfo.__name__}. Got: {type(exr_f)}")
         self.exr_f = exr_f
         self.definitions = self.exr_f.get_cryptomatte_definitions()
-        if len(self.definitions) > 1:
-            # raise ValueError(
-            #     f"Multiple cryptomatte definitions not supported. "
-            #     f"Found {len(self.definitions)} definitions:\n  {self.definitions}"
-            # )
-
-            # Apple requires multiple cryptomatte definitions. However, the original definition, named
-            # "cryptomatte" is unchanged. We get the segments for the segments.png file from this definition only.
-            # Ignore all definitions apart from the one named "cryptomatte"
-            print('\nWARNING: Multiple cryptomatte definitions found. Ignoring all except the definition named '
-                  '"cryptomatte".')
-            for crypto_def in self.definitions:
-                if crypto_def.name != 'cryptomatte':
-                    self.definitions.remove(crypto_def)
 
         # In the manifest, some entries are automatically added by vray, which should be ignored.
         # "default" should contain all the regions which have not been explicitly assigned a value in the cryptomatte.
@@ -93,15 +79,18 @@ class Crypto:
         mask = (coverage * 255).astype(np.uint8)
         return mask
 
-    def get_masks_for_all_objs(self, crypto_def_idx) -> OrderedDict:
+    def get_masks_for_all_objs(self, crypto_def_name: str) -> OrderedDict:
         """
         Get an individual mask of every object in the cryptomatte
+
+        Args:
+            crypto_def_name: The name of the cryptomatte definition from which to extract masks
 
         Returns:
             collections.OrderedDict(str, numpy.ndarray): Mapping from the name of each object to it's anti-aliased mask.
                 For mask -> Shape: [H, W], dtype: uint8
         """
-        crypto_def = self.definitions[crypto_def_idx]
+        crypto_def = self.definitions[crypto_def_name]
 
         manifest = self.exr_f.get_cryptomatte_manifest(crypto_def)
         # Clean manifest - Some items in the manifest are added automatically by the render engine.
@@ -128,20 +117,19 @@ class Crypto:
 
         return obj_masks
 
-    def get_combined_mask(self, crypto_def_idx: int = 0) -> Tuple[np.ndarray, Dict[str, int]]:
+    def get_combined_mask(self, crypto_def_name: str) -> Tuple[np.ndarray, Dict[str, int]]:
         """
-        Get a single mask representing all the objects within the scene.
+        Get a single mask for semantic segmentation representing all the objects within the scene.
         Each object is represented by a unique integer value, starting from 1. 0 is reserved for background.
 
         Args:
-            crypto_def_idx: The index of the cryptomatte whose mask to extract (starting from 0).
-                            An EXR can contain multiple cryptomattes.
+            crypto_def_name: The name of the cryptomatte definition from which to extract masks
 
         Returns:
             numpy.ndarray: Mask of all objects. Shape: [H, W], dtype: np.uint16.
             dict: Mapping of the object names to mask IDs for this image.
         """
-        obj_masks = self.get_masks_for_all_objs(crypto_def_idx)
+        obj_masks = self.get_masks_for_all_objs(crypto_def_name)
 
         # Create a map of obj names to ids
         name_to_mask_id_map = OrderedDict()

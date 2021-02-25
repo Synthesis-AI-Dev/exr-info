@@ -3,9 +3,8 @@ import enum
 import fnmatch
 import json
 from collections import namedtuple, OrderedDict
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import Imath
 import numpy as np
@@ -135,7 +134,7 @@ class ExrInfo:
             return False
         return True
 
-    def get_cryptomatte_definitions(self) -> List[CryptoDef]:
+    def get_cryptomatte_definitions(self) -> Dict[str, CryptoDef]:
         r"""Get the name and ID of all cryptomatte definitions present in EXR
 
         A render can contain multiple cryptomattes (each is referred to as a cryptomatte definition). A render engine
@@ -185,11 +184,11 @@ class ExrInfo:
         CRYPTOMATTE_IDENTIFIER = "cryptomatte/???????/name"
         crypto_entries = fnmatch.filter(list(self.header.keys()), CRYPTOMATTE_IDENTIFIER)
 
-        crypto_defs = []
+        crypto_defs = {}
         for cry_ent in crypto_entries:
             crypto_id = cry_ent.split("/")[1]
             crypto_name = self.header[cry_ent]
-            crypto_defs.append(CryptoDef(name=crypto_name, id=crypto_id))
+            crypto_defs[crypto_name] = CryptoDef(name=crypto_name, id=crypto_id)
 
         return crypto_defs
 
