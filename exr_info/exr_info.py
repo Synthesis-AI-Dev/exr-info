@@ -73,7 +73,7 @@ class ExrChannels:
             self.rgb_denoised_vray = ["effectsResult.R", "effectsResult.G", "effectsResult.B"]
             self.alpha = "A"
             self.depth = "Z"
-            self.normals = ["normals.X", "normals.Y", "normals.Z"]
+            self.normals = ["CameraNormals.R", "CameraNormals.G", "CameraNormals.B"] #["normals.X", "normals.Y", "normals.Z"]
             # Vray uses left-handed coord system for normals: X-left, Y-up, Z-behind. We use a
             # right-hand system: X-right, Y-up, Z-behind. Correct it by multiplying each normals channel with
             # the corresponding factor.
@@ -252,7 +252,7 @@ class ExrInfo:
         VRAY_IDENTIFIER = "vrayInfo/*"
         vray_info = fnmatch.filter(list(self.header.keys()), VRAY_IDENTIFIER)
 
-        if len(vray_info) > 0:
+        if len(vray_info) > -1:
             render_engine = Renderer.VRAY
         else:
             render_engine = Renderer.BLENDER
