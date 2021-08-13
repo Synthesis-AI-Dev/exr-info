@@ -149,20 +149,6 @@ class Crypto:
 
         mask_combined[255 - total > best] = 0
 
-        # # Create a map of obj names to ids
-        # name_to_mask_id_map = OrderedDict()
-        # name_to_mask_id_map["background"] = 0  # Background is always class 0
-        # obj_names = obj_masks.keys()
-        # for idx, obj_name in enumerate(obj_names):
-        #     name_to_mask_id_map[obj_name] = idx + 1
-        #
-        # # Combine all the masks into single mask without anti-aliasing for semantic segmentation
-        # masks = np.stack(list(obj_masks.values()), axis=0)  # Shape: [N, H, W]
-        # background_mask = 255 - masks.sum(axis=0)
-        # masks = np.concatenate((np.expand_dims(background_mask, 0), masks), axis=0)
-        # mask_combined = masks.argmax(axis=0)
-        # mask_combined = mask_combined.astype(np.uint16)
-
         return mask_combined, name_to_mask_id_map
 
     @staticmethod
