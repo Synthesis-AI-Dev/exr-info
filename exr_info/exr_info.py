@@ -249,15 +249,16 @@ class ExrInfo:
 
     def identify_render_engine(self) -> Renderer:
         """Identify which render engine was used to render an EXR"""
-        VRAY_IDENTIFIER = "vrayInfo/*"
-        vray_info = fnmatch.filter(list(self.header.keys()), VRAY_IDENTIFIER)
-
-        if len(vray_info) > 0:
-            render_engine = Renderer.VRAY
-        else:
-            render_engine = Renderer.BLENDER
-
-        return render_engine
+        return Renderer.VRAY
+        #VRAY_IDENTIFIER = "vrayInfo/*"
+        #vray_info = fnmatch.filter(list(self.header.keys()), VRAY_IDENTIFIER)
+        #
+        #if len(vray_info) > 0:
+        #    render_engine = Renderer.VRAY
+        #else:
+        #    render_engine = Renderer.BLENDER
+        #
+        #return render_engine
 
     def get_imsize(self) -> Tuple[int, int]:
         """Get the height and width of image within an EXR file
