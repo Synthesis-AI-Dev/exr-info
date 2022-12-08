@@ -146,8 +146,12 @@ class Crypto:
             total += obj_mask
             mask_combined[obj_mask > best] = idx + 1
             best = np.max([best, obj_mask], axis=0)
-
-        mask_combined[255 - total > best] = 0
+        if total is None:
+            crypto_channels = self.exr_f.get_cryptomatte_channels(crypto_def)
+            channels_arr = np.stack(self.exr_f.read_channels(crypto_channels), axis=-1)
+            mask_combined  = np.zeros_like(channels_arr[:, :, 0], dtype=np.uint16)
+        else:
+            mask_combined[255 - total > best] = 0
 
         return mask_combined, name_to_mask_id_map
 
